@@ -1,0 +1,178 @@
+---
+title: "FinalProject"
+author: "Abia-Mbu Amberetu"
+date: "May 16, 2018"
+output: html_document
+---
+
+
+### CMSC320 Final Project
+Author: Abia-Mbu Amberetu
+
+
+#### Introduction
+
+With the NBA Playoffs underway, and the NBA Finals slowly approaching, many questions arise once again. Does the team with homefield advantage have the higher chance of winning the NBA Finals series? What are the common trends/stats shared amongst championship teams; field goal percentage? Free throw percentage? Assists per game? Rebounds per game?For this tutorial I will be analyzing using three NBA datasets in order to answer these questions and to give the readers an introduction into Data Science.*I Will be using R....link to download....*
+
+### Data Used (Which can be downloaded from each of the link below):
+https://www.kaggle.com/daverosenman/nba-finals-team-stats
+Information on NBA finals from 1980 to 2017.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### Load the libraries needed
+1. tidyverse
+2. dplyr
+3. ggplot2
+4. stats
+5. stringr
+
+```{r load_data, message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+```
+# Data Collection and Processing
+
+```{r}
+
+champ_tab <- read_csv("championsdata.csv")
+champ_tab
+
+```
+
+For this dataset, we have game stats on every game played in the NBA finals since 1980, but only the winning team. We must tidy the data.
+```{r}
+
+champions <-champ_tab %>% group_by(Year,Team) %>%
+      summarise(avg_fg= mean(FGP),avg_fta= mean(FTA), avg_ftp= mean(FTP), wins= sum(Win),            avg_reb= mean(TRB), avg_assists= mean(AST), avg_steals= mean(STL), avg_blocks= mean(BLK), avg_pts= mean(PTS)) %>% mutate(Champs=ifelse(wins ==4, 1,0)) %>% filter(wins ==4)
+champions 
+```
+The package being utilized here is "dplyr" which allows us to run our dataset through a pipeline of functions using(%>%).
+1. We group the data by Year and team using group_by()
+2. We summarise the data, creating new attributs(avg_reb,avg_assists,etc).
+3. I had to do a bit of Tidying for this dataset. 2 of the years were duplicated and I noticed that the Team names were spelled incorrectly. I also noticed the amount of wins is 0 for these incorrect years.So i called a filter funtion that removes any entity that doesnt have 4 wins(which is how much wins a championship team has)
+
+```{r}
+runnerups <- read.csv("runnerupsdata.csv")
+runner_ups <- runnerups %>% group_by(Year,Team) %>%
+      summarise(avg_fg= mean(FGP),avg_fta= mean(FTA), avg_ftp= mean(FTP),
+      wins=sum(Win),avg_reb= mean(TRB), avg_assists= mean(AST), avg_steals= mean(STL),               avg_blocks=mean(BLK),avg_pts= mean(PTS)) %>% mutate(Champs=ifelse(wins ==4, 1,0))
+
+runner_ups
+
+```
+# Visualization and Exploratory Data Analysis
+
+```{r}
+#records <- read.csv("Team_Records.csv")
+#records$year <- gsub("^(\\d{4}).*", '\\1',records$ï..Season)
+
+#Plot for Runner-Ups average FG Percentage for every year in the dataset
+runner_ups %>% 
+  ggplot(mapping=aes(x=Year, y=avg_fg,label= Team)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  geom_point(aes(color= Team)) + geom_smooth() + ggtitle("Runner-Ups average FG percentage")
+
+#Plot for Champions average FG Percentage for every year in the dataset
+champions %>% ggplot(mapping=aes(x=Year, y=avg_fg,label= Team)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  geom_point(aes(color= Team)) + geom_smooth() + ggtitle("Champions average FG percentage")
+
+#Plot for Runner-Ups average Assists every year in the data set
+runner_ups %>%
+   ggplot(mapping=aes(x=Year, y=avg_assists,label= Team)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  geom_point(aes(color= Team)) + geom_smooth() + ggtitle("Runner-Ups average Assist")
+
+#Plot for Champions average Assists every year in the data set
+champions %>%ggplot(mapping=aes(x=Year, y=avg_assists,label= Team)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  geom_point(aes(color= Team)) + geom_smooth() + ggtitle("Champions average Assists")
+  
+
+#Plot for Runner-Ups average Rebounds every year in the data set
+runner_ups %>%
+   ggplot(mapping=aes(x=Year, y=avg_reb,label= Team)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  geom_point(aes(color= Team)) + geom_smooth() + ggtitle("Runner-Ups average Rebounds")
+
+#Plot for Champions average Rebounds every year in the data set
+champions %>%
+  ggplot(mapping=aes(x=Year, y=avg_reb,label= Team)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  geom_point(aes(color= Team)) + geom_smooth() + ggtitle("Champions average Rebounds")
+
+```
+The library being utilized here is ggplot2.
+We use the function ggplot(mapping(...)) to plot our dataset based on attributes x and y.
+For this graph we used the geom_point type of plot, but there are others like geom_bar,geom_line, geom_violin. We give it a title using ggtitle(). Other information on ggplot can be fount by typing in ?gglot2 in the console or you can check out this cheatsheet:http://www.rstudio.com/wp-content/uploads/2016/11/ggplot2-cheatsheet-2.1.pdf 
+
+
+```{r}
+#Now we will combine both datasets into one
+total <- rbind(runner_ups, champions)
+
+#Plot showing FG averages for Champions vs Losers
+total %>% 
+   mutate(yearID_fctr = as.factor(Year)) %>%
+  group_by(yearID_fctr,Team) %>% ggplot(mapping=aes(x=yearID_fctr, y=avg_fg)) +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ geom_point((aes(color= ifelse(Champs ==1,"red","blue")))) + ggtitle("Champions Vs. Losers(FG average)")+
+  scale_colour_discrete(name  ="Outcome",labels=c("Losers","Champs"))
+
+#Plot showing Rebounding averages for Champions vs Losers
+total %>% 
+   mutate(yearID_fctr = as.factor(Year)) %>%
+  group_by(yearID_fctr,Team) %>% ggplot(mapping=aes(x=yearID_fctr, y=avg_reb)) +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+ geom_point((aes(color= ifelse(Champs ==1,"red","blue")))) + ggtitle("Champions Vs. Losers(Rebound averages)") +
+  scale_colour_discrete(name  ="Outcome",labels=c("Losers","Champs"))
+
+#Plot showing how many Finals wins each team has(that has been to atleast one final)
+total %>% group_by(Team) %>% 
+  summarise(Championships= sum(Champs), avg_fg=mean(avg_fg)) %>% 
+    ggplot(mapping=aes(x= Team, y= Championships))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  + 
+  geom_bar(stat = "identity") + ggtitle("Championships per team") + 
+  xlab("Team") +        
+  scale_colour_discrete(name  ="Outcome",labels=c("Losers","Champs"))
+
+#Plot showing Lakers FG Percentage when they won/lost Championships
+Lakers_plot <- total %>% filter(Team== "Lakers")
+
+Lakers_plot %>% ggplot(mapping=aes(x=Year, y=avg_fg)) + geom_point(aes(color= ifelse(Champs ==1,"red","blue"))) + ggtitle("Lakers FG average every year in Finals") +scale_colour_discrete(name  ="Outcome",labels=c("Losers","Champs"))
+
+#Plot showing Bulls FG Percentage when they won/lost Championships
+Bulls_plot <- total %>% filter(Team== "Bulls")
+
+Bulls_plot %>% ggplot(mapping=aes(x=Year, y=avg_fg)) + geom_point(aes(color= ifelse(Champs ==1,"red","blue"))) + ggtitle("Bulls FG average every year in Finals") +scale_colour_discrete(name  ="Outcome",labels=c("Losers","Champs"))
+
+
+
+
+```
+
+
+```{r}
+
+salaries <- read_csv("NBASalaries1990to2016.csv")
+
+salaries$Team <- gsub("^(\\w+)(\\w+)?\\s(\\w+)$","\\3",salaries$Team)
+salaries$Year <- salaries$Season_Start
+salaries
+salaries %>% group_by(Team,Year) %>% summarise(total_salary=sum(Salary)) %>% 
+  ggplot(mapping=aes(x=Year, y=total_salary))+ 
+  scale_y_continuous(labels= scales::dollar)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + geom_point(aes(color= Team))
+
+```
+In this plot we see salaries increase as the years progress.
+
+# Conclusion
+In this tutorial, you should be very familiar with the basics of Data science. Learning functions from libraries such as dplyr, tidyverse,stringr, ggplot. Hopefully now you can go out on learn more about Data Science and explore some data!
